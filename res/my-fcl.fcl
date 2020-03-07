@@ -1,0 +1,62 @@
+/*
+	Example: A tip calculation FIS (fuzzy inference system)
+	Calculates relevancy based on 'title', 'headings' and 'body'
+
+*/
+
+FUNCTION_BLOCK relevant_words	// Block definition (there may be more than one block per file)
+
+// Define input variables
+VAR_INPUT
+	title : REAL;
+	headings : REAL;
+	body : REAL;
+END_VAR
+
+// Define output variable
+VAR_OUTPUT
+	relevancy : REAL;
+END_VAR
+
+// Fuzzify input variable 'service': {'poor', 'good' , 'excellent'}
+FUZZIFY title
+	TERM insignificant := (0, 1) (0.5, 0) ;
+	TERM significant := (0.5, 0) (2, 1);
+END_FUZZIFY
+
+FUZZIFY headings
+	TERM insignificant := (0, 1) (0.5, 0) ;
+	TERM significant := (0.5, 0) (2, 1);
+END_FUZZIFY
+
+FUZZIFY body
+	TERM insignificant := (0, 1) (4, 0) ;
+	TERM relevant := (1, 0) (4,1) (6,1) (9,0);
+	TERM significant := (6, 0) (9, 1);
+END_FUZZIFY
+
+// Defuzzify output variable 'tip' : {'cheap', 'average', 'generous' }
+DEFUZZIFY relevancy
+	TERM low := (0,0) (5,1) (10,0);
+	TERM medium := (10,0) (15,1) (20,0);
+	TERM high := (20,0) (25,1) (30,0);
+
+	METHOD : COG;		// Use 'Center Of Gravity' defuzzification method
+	DEFAULT := 0;		// Default value is 0 (if no rule activates defuzzifier)
+END_DEFUZZIFY
+
+// Inference rules
+RULEBLOCK No1
+	AND : MIN;	// Use 'min' for 'and'
+	ACT : MIN;	// Use 'min' activation method
+	ACCU : MAX;	// Use 'max' accumulation method
+
+	RULE 1 : IF title IS significant THEN relevancy IS medium;
+	RULE 2 : IF body IS significant THEN relevancy IS medium;
+	RULE 3 : IF title IS significant OR headings IS significant OR body IS significant THEN relevancy IS high;
+	RULE 4 : IF title IS significant OR headings IS significant THEN relevancy IS high;
+
+
+END_RULEBLOCK
+
+END_FUNCTION_BLOCK
