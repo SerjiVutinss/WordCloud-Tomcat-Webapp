@@ -1,27 +1,28 @@
 package ie.gmit.sw;
 
-import java.io.*;
-import javax.servlet.*;
-import javax.servlet.http.*;
+import ie.gmit.sw.ai.cloud.LogarithmicSpiralPlacer;
+import ie.gmit.sw.ai.cloud.WeightedFont;
+import ie.gmit.sw.ai.cloud.WordFrequency;
+import ie.gmit.sw.ai.web_opinion.SearchQueryTaskWorker;
+import ie.gmit.sw.ai.web_opinion.models.Enums;
+import ie.gmit.sw.ai.web_opinion.models.SearchQueryTask;
+import ie.gmit.sw.ai.web_opinion.utils.Config;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import javax.imageio.ImageIO;
-
-import java.util.*;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Comparator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
-import ie.gmit.sw.ai.cloud.LogarithmicSpiralPlacer;
-import ie.gmit.sw.ai.cloud.WeightedFont;
-import ie.gmit.sw.ai.cloud.WordFrequency;
-import ie.gmit.sw.ai.web_opinion.Config;
-import ie.gmit.sw.ai.web_opinion.NodeParserExample;
-import ie.gmit.sw.ai.web_opinion.NodeParserWorker;
-import ie.gmit.sw.ai.web_opinion.Tuple;
 
 /*
  * -------------------------------------------------------------------------------------------------------------------
@@ -56,7 +57,7 @@ public class ServiceHandler extends HttpServlet {
     // <Tuple<jobNumber, queryText>>
 
     // Queries - for now, just a <job#, URL>
-    private BlockingQueue<Tuple<String, String>> _inQueue = new ArrayBlockingQueue<>(100);
+    private BlockingQueue<SearchQueryTask> _inQueue = new ArrayBlockingQueue<>(100);
     // Results - for now, <Job#, WordFrequency[]>
     private ConcurrentMap<String, WordFrequency[]> _outQueue = new ConcurrentHashMap<>();
 
@@ -71,35 +72,60 @@ public class ServiceHandler extends HttpServlet {
     }
 
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         resp.setContentType("text/html"); //Output the MIME type
         PrintWriter out = resp.getWriter(); //Write out text. We can write out binary too and change the MIME type...
 
         //Initialise some request varuables with the submitted form info. These are local to this method and thread safe...
 
         String option = req.getParameter("cmbOptions"); //Change options to whatever you think adds value to your assignment...
+
+        String searchSite = req.getParameter("cmbSearchSite");
+        System.out.println(searchSite);
+
+
+        Enums.SearchType searchType = null;
+
+        switch (searchSite) {
+            case "Wikipedia":
+                searchType = Enums.SearchType.WIKIPEDIA;
+                break;
+
+            case "DuckDuckGo":
+                searchType = Enums.SearchType.DUCK_DUCK_GO;
+                break;
+
+            default:
+                break;
+        }
+
+
         String taskNumber = req.getParameter("frmTaskNumber");
         String query = req.getParameter("query");
 
-        System.out.println("TASK#: " + taskNumber);
 
         String pollingTime = "5000";
 
+        // First request - must create the task number
         if (taskNumber == null) {
 
             taskNumber = new String("T" + jobNumber);
             jobNumber++;
+            System.out.println("CREATED TASK#: " + taskNumber);
 
 //			// Create a separate worker thread for each client's request.
             // START THE PARSER HERE...
-            new Thread(new NodeParserWorker(_inQueue, _outQueue)).start();
+            new Thread(new SearchQueryTaskWorker(_inQueue, _outQueue)).start();
 
-            printWaitPage(out, taskNumber, query, pollingTime);
+            printWaitPage(out, taskNumber, query, pollingTime, searchSite);
 
             try {
                 // Add the job number and payload to the IN-QUEUE
-                _inQueue.put(new Tuple<String, String>(taskNumber, query));
+                _inQueue.put(new SearchQueryTask(taskNumber, query, searchType));
+                System.out.println(taskNumber + ": " + query + " PLACED ON IN QUEUE");
                 // Also add the job number to the OUT-QUEUE with a null value.
                 _outQueue.put(taskNumber, null);
+                System.out.println(taskNumber + " PLACED ON IN QUEUE");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -109,73 +135,39 @@ public class ServiceHandler extends HttpServlet {
             try {
                 // Check OUT-QUEUE for finished job.
                 WordFrequency[] taskResult = _outQueue.get(taskNumber);
-                if (taskResult != null) {
+                System.out.println("TASK " + taskNumber + " FOUND ON OUT QUEUE");
+                if (taskResult != null && taskResult.length > 0) {
 
-                	// Get hard-coded results for demonstration
-//					WordFrequency[] words = new WeightedFont().getFontSizes(getWordFrequencyKeyValue());
-					WordFrequency[] words = new WeightedFont().getFontSizes(taskResult);
-					Arrays.sort(words, Comparator.comparing(WordFrequency::getFrequency, Comparator.reverseOrder()));
+                    System.out.println("\tGOT RESULT FROM OUT QUEUE");
+                    // Get hard-coded results for demonstration
+                    WordFrequency[] words = new WeightedFont().getFontSizes(taskResult);
+                    Arrays.sort(words, Comparator.comparing(WordFrequency::getFrequency, Comparator.reverseOrder()));
 
-					// Spira Mirabilis
-					LogarithmicSpiralPlacer placer = new LogarithmicSpiralPlacer(800, 600);
-					for (WordFrequency word : words) {
-						placer.place(word); //Place each word on the canvas starting with the largest
-					}
+                    // Spira Mirabilis
+                    LogarithmicSpiralPlacer placer = new LogarithmicSpiralPlacer(800, 600);
+                    for (WordFrequency word : words) {
+                        placer.place(word); //Place each word on the canvas starting with the largest
+                    }
 
-					BufferedImage cloud = placer.getImage(); //Get a handle on the word cloud graphic
+                    BufferedImage cloud = placer.getImage(); //Get a handle on the word cloud graphic
 
-					printResults(out, cloud);
+                    printResults(out, cloud);
 
                 } else {
                     // Still waiting for task to complete...
-                    printWaitPage(out, taskNumber, query, pollingTime);
+                    System.out.println("\tRESULTS WAS NULL");
+                    printWaitPage(out, taskNumber, query, pollingTime, searchSite);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (NullPointerException e) {
+//                e.printStackTrace();
+                System.out.println(taskNumber + " NOT FOUND ON OUT QUEUE");
+                printWaitPage(out, taskNumber, query, pollingTime, searchSite);
             }
         }
     }
 
     public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         doGet(req, resp);
-    }
-
-    //A sample array of WordFrequency for demonstration purposes
-    private WordFrequency[] getWordFrequencyKeyValue() {
-        WordFrequency[] wf = new WordFrequency[32];
-        wf[0] = new WordFrequency("Galway", 65476);
-        wf[1] = new WordFrequency("Sligo", 43242);
-        wf[2] = new WordFrequency("Roscommon", 2357);
-        wf[4] = new WordFrequency("Clare", 997);
-        wf[5] = new WordFrequency("Donegal", 876);
-        wf[17] = new WordFrequency("Armagh", 75);
-        wf[6] = new WordFrequency("Waterford", 811);
-        wf[7] = new WordFrequency("Tipperary", 765);
-        wf[8] = new WordFrequency("Westmeath", 643);
-        wf[9] = new WordFrequency("Leitrim", 543);
-        wf[10] = new WordFrequency("Mayo", 456);
-        wf[11] = new WordFrequency("Offaly", 321);
-        wf[12] = new WordFrequency("Kerry", 221);
-        wf[13] = new WordFrequency("Meath", 101);
-        wf[14] = new WordFrequency("Wicklow", 98);
-        wf[18] = new WordFrequency("Antrim", 67);
-        wf[3] = new WordFrequency("Limerick", 1099);
-        wf[15] = new WordFrequency("Kildare", 89);
-        wf[16] = new WordFrequency("Fermanagh", 81);
-        wf[19] = new WordFrequency("Dublin", 12);
-        wf[20] = new WordFrequency("Carlow", 342);
-        wf[21] = new WordFrequency("Cavan", 234);
-        wf[22] = new WordFrequency("Down", 65);
-        wf[23] = new WordFrequency("Kilkenny", 45);
-        wf[24] = new WordFrequency("Laois", 345);
-        wf[25] = new WordFrequency("Derry", 7);
-        wf[26] = new WordFrequency("Longford", 8);
-        wf[27] = new WordFrequency("Louth", 34);
-        wf[28] = new WordFrequency("Monaghan", 101);
-        wf[29] = new WordFrequency("Tyrone", 121);
-        wf[30] = new WordFrequency("Wexford", 144);
-        wf[31] = new WordFrequency("Cork", 522);
-        return wf;
     }
 
     private String encodeToString(BufferedImage image) {
@@ -210,7 +202,7 @@ public class ServiceHandler extends HttpServlet {
         return image;
     }
 
-    private void printWaitPage(PrintWriter out, String taskNumber, String queryText, String pollingTime) {
+    private void printWaitPage(PrintWriter out, String taskNumber, String queryText, String pollingTime, String searchSite) {
         out.print("<H1>Processing request for Job#: " + taskNumber + "</H1>");
         out.print("<div id=\"r\"></div>");
         out.print("<font color=\"#993333\"><b>");
@@ -218,10 +210,11 @@ public class ServiceHandler extends HttpServlet {
 //		out.print("<P>Language Dataset is <b><u>" + _dataSetFile.length() + "</u></b> bytes in size");
         out.print("<br>Polling Time: " + pollingTime + "(ms)");
 //		out.print("<br>Number of Results: " + numberOfResults);
-        out.print("<br>Query Text : " + queryText);
+        out.print("<br>Query Text: " + queryText);
+        out.print("<br>Searching site: " + searchSite);
         out.print("</font><p/>");
         out.print("<form method=\"POST\" name=\"frmRequestDetails\">");
-//        out.print("<input name=\"cmbOptions\" type=\"hidden\" value=\"" + option + "\">");
+        out.print("<input name=\"cmbSearchSite\" type=\"hidden\" value=\"" + searchSite + "\">");
         out.print("<input name=\"cmbPollingTime\" type=\"hidden\" value=\"" + pollingTime + "\">");
 //		out.print("<input name=\"cmbNumberOfResults\" type=\"hidden\" value=\"" + numberOfResults + "\">");
         out.print("<input name=\"query\" type=\"hidden\" value=\"" + queryText + "\">");

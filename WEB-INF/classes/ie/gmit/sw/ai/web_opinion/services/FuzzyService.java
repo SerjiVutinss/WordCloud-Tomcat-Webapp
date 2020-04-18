@@ -1,19 +1,20 @@
-package ie.gmit.sw.ai.web_opinion;
+package ie.gmit.sw.ai.web_opinion.services;
 
 import ie.gmit.sw.ai.web_opinion.utils.Config;
+import ie.gmit.sw.ai.web_opinion.models.ScoredDocument;
 import net.sourceforge.jFuzzyLogic.FIS;
 
-public class FuzzyLogicCalculator {
+public class FuzzyService {
 
     private final FIS fis;
     private final String fileName;
 
-    public FuzzyLogicCalculator() {
+    public FuzzyService() {
         fileName = Config.FCL_FILE_LOCATION;
         fis = FIS.load(fileName);
     }
 
-    public int getFuzzyHeuristic(int title, int headings, int body) {
+    public int getFuzzyHeuristic(ScoredDocument scoredDocument) {
 
         // Load from 'FCL' file
 
@@ -24,14 +25,12 @@ public class FuzzyLogicCalculator {
         }
 
         // Set inputs
-        fis.setVariable("title", title);
-        fis.setVariable("headings", headings);
-        fis.setVariable("body", body);
+        fis.setVariable("title", scoredDocument.getTitleScore());
+        fis.setVariable("headings", scoredDocument.getHeadingScore());
+        fis.setVariable("body", scoredDocument.getBodyScore());
         // Evaluate
         fis.evaluate();
 
-        int result = (int)fis.getVariable("relevancy").getLatestDefuzzifiedValue();
-        return result;
+        return (int)fis.getVariable("relevancy").getLatestDefuzzifiedValue();
     }
-
 }

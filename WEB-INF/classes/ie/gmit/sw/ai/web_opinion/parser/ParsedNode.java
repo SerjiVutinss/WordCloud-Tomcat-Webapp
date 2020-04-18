@@ -1,4 +1,4 @@
-package ie.gmit.sw.ai.web_opinion;
+package ie.gmit.sw.ai.web_opinion.parser;
 
 import org.jsoup.nodes.Document;
 

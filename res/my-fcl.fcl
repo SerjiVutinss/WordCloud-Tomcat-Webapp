@@ -51,9 +51,9 @@ RULEBLOCK No1
 	ACT : MIN;	// Use 'min' activation method
 	ACCU : MAX;	// Use 'max' accumulation method
 
-	RULE 1 : IF title IS significant THEN relevancy IS medium;
-	RULE 2 : IF body IS significant THEN relevancy IS medium;
-	RULE 3 : IF title IS significant OR headings IS significant OR body IS significant THEN relevancy IS high;
+	RULE 1 : IF title IS significant AND headings IS significant AND body IS insignificant THEN relevancy IS high;
+	RULE 1 : IF title IS significant AND headings IS significant AND body is insignificant THEN relevancy IS medium;
+	RULE 3 : IF body IS significant THEN relevancy IS low;
 	RULE 4 : IF title IS significant OR headings IS significant THEN relevancy IS high;
 
 

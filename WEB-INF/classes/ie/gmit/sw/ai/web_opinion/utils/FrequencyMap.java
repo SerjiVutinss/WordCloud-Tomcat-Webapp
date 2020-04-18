@@ -1,4 +1,4 @@
-package ie.gmit.sw.ai.web_opinion;
+package ie.gmit.sw.ai.web_opinion.utils;
 
 import java.util.Collection;
 import java.util.Map;
@@ -14,15 +14,27 @@ public class FrequencyMap implements Map<String, Integer> {
     }
 
     public Integer put(String key) {
-        if(map.containsKey(key)){
+        if (map.containsKey(key)) {
             int frequency = map.get(key);
-            frequency+=1;
+            frequency += 1;
             return map.put(key, frequency);
         } else {
-            return map.put(key, 1);
+            map.put(key, 1);
+            return 1;
         }
     }
 
+    public void merge(FrequencyMap inputMap) {
+        for (Map.Entry<String, Integer> e : inputMap.entrySet()) {
+            if (map.containsKey(e.getKey())) {
+                map.put(e.getKey(), map.get(e.getKey()) + e.getValue());
+            } else {
+                map.put(e.getKey(), e.getValue());
+            }
+        }
+    }
+
+    //<editor-fold desc="Map Implementation">
     @Override
     public int size() {
         return map.size();
@@ -83,4 +95,5 @@ public class FrequencyMap implements Map<String, Integer> {
     public Set<Entry<String, Integer>> entrySet() {
         return map.entrySet();
     }
+    //</editor-fold desc="Map">
 }

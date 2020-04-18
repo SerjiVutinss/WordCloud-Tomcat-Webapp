@@ -1,4 +1,4 @@
-package ie.gmit.sw.ai.web_opinion;
+package ie.gmit.sw.ai.web_opinion.utils;
 
 import java.io.BufferedReader;
 import java.io.File;
