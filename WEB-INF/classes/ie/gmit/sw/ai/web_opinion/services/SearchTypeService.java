@@ -30,7 +30,7 @@ public class SearchTypeService {
 
     public static SearchModel getSearchModel(String friendlyName) {
         if (_friendlyModels == null) build();
-        return _friendlyModels.get(friendlyName);
+        return _friendlyModels.get(friendlyName.toLowerCase());
     }
 
     public static SearchModel getSearchModel(Enums.SearchType searchType) {
@@ -40,7 +40,7 @@ public class SearchTypeService {
 
     public static Enums.SearchType getSearchType(String friendlyName) {
         if (_friendlyModels == null) build();
-        return _searchModels.get(friendlyName).getSearchType();
+        return _searchModels.get(friendlyName.toLowerCase()).getSearchType();
     }
 
 }

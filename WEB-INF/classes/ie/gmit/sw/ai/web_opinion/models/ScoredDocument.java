@@ -39,6 +39,7 @@ public class ScoredDocument {
         this.docElements = documentSelector.getDocumentElements(this.document);
 
         this.calculateScores();
+        System.out.println("SCORE: " + this.getScore());
     }
 
     public Document getDocument() {
@@ -80,6 +81,8 @@ public class ScoredDocument {
     }
 
     private void calculateScores() {
+
+        System.out.println("Calculating Score for: " + this.docElements.getTitle());
 
         // Score the title
         this.titleScore = this.getQueryFrequencyInString(query, docElements.getTitle()) * TITLE_WEIGHT;

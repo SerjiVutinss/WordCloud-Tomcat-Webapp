@@ -5,8 +5,10 @@ import ie.gmit.sw.ai.cloud.WeightedFont;
 import ie.gmit.sw.ai.cloud.WordFrequency;
 import ie.gmit.sw.ai.web_opinion.SearchQueryTaskWorker;
 import ie.gmit.sw.ai.web_opinion.models.Enums;
+import ie.gmit.sw.ai.web_opinion.models.Query;
 import ie.gmit.sw.ai.web_opinion.models.SearchQueryTask;
 import ie.gmit.sw.ai.web_opinion.utils.Config;
+import org.jsoup.Connection;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletContext;
@@ -71,61 +73,102 @@ public class ServiceHandler extends HttpServlet {
         f = new File(ignoreWords); //A file wrapper around the ignore words...
     }
 
+
+    private class RequestParams {
+
+        private String _taskNumber;
+        private final String _query;
+        private final String _searchSite;
+        private final int _maxResults;
+        private final int _maxDepth;
+
+        private final int _pollingTime;
+
+        public RequestParams(HttpServletRequest req) {
+
+            _taskNumber = req.getParameter("frmTaskNumber");
+            _query = req.getParameter("strQuery");
+            _searchSite = req.getParameter("cmbSearchSite");
+            _maxResults = Integer.parseInt(req.getParameter("cmbMaxResults"));
+            _maxDepth = Integer.parseInt(req.getParameter("cmbMaxDepth"));
+            _pollingTime = Integer.parseInt(req.getParameter("cmbPollingTime"));
+        }
+
+        public String getTaskNumber() {
+            return _taskNumber;
+        }
+
+        public void setTaskNumber(String _taskNumber) {
+            this._taskNumber = _taskNumber;
+        }
+
+        public String getSearchSite() {
+            return _searchSite;
+        }
+
+        public String getQuery() {
+            return _query;
+        }
+
+        public int getMaxResults() {
+            return _maxResults;
+        }
+
+        public int getMaxDepth() {
+            return _maxDepth;
+        }
+
+        public int getPollingTime() {
+            return _pollingTime;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("{TaskNumber: %s; Query: %s; SearchSite: %s; MaxResults: %d; MaxDepth: %d; PollingTime: %d;",
+                    this._taskNumber, this._query, this._searchSite, this._maxResults, this._maxDepth, this._pollingTime);
+        }
+    }
+
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         resp.setContentType("text/html"); //Output the MIME type
         PrintWriter out = resp.getWriter(); //Write out text. We can write out binary too and change the MIME type...
 
-        //Initialise some request varuables with the submitted form info. These are local to this method and thread safe...
+        // Create a params object from the request
+        RequestParams params = new RequestParams(req);
+        System.out.println(params);
 
-        String option = req.getParameter("cmbOptions"); //Change options to whatever you think adds value to your assignment...
+//        String searchType = "wikipedia";
+//        String pollingTime = "5000";
 
-        String searchSite = req.getParameter("cmbSearchSite");
-        System.out.println(searchSite);
-
-
-        Enums.SearchType searchType = null;
-
-        switch (searchSite) {
-            case "Wikipedia":
-                searchType = Enums.SearchType.WIKIPEDIA;
-                break;
-
-            case "DuckDuckGo":
-                searchType = Enums.SearchType.DUCK_DUCK_GO;
-                break;
-
-            default:
-                break;
-        }
-
-
-        String taskNumber = req.getParameter("frmTaskNumber");
-        String query = req.getParameter("query");
-
-
-        String pollingTime = "5000";
+        Query searchQuery = new Query.QueryBuilder(params.getQuery(), params.getSearchSite())
+                .setMaxDepth(params._maxDepth)
+                .setMaxResults(params._maxResults)
+                .build();
 
         // First request - must create the task number
-        if (taskNumber == null) {
+        if (params.getTaskNumber() == null) {
 
-            taskNumber = new String("T" + jobNumber);
+            params.setTaskNumber(new String("T" + jobNumber));
             jobNumber++;
-            System.out.println("CREATED TASK#: " + taskNumber);
+            System.out.println("CREATED TASK#: " + params.getTaskNumber());
 
 //			// Create a separate worker thread for each client's request.
             // START THE PARSER HERE...
             new Thread(new SearchQueryTaskWorker(_inQueue, _outQueue)).start();
 
-            printWaitPage(out, taskNumber, query, pollingTime, searchSite);
+            printWaitPage(out, params);
 
             try {
                 // Add the job number and payload to the IN-QUEUE
-                _inQueue.put(new SearchQueryTask(taskNumber, query, searchType));
-                System.out.println(taskNumber + ": " + query + " PLACED ON IN QUEUE");
+                SearchQueryTask task = new SearchQueryTask(params.getTaskNumber(), searchQuery);
+
+                _inQueue.put(task);
+
+                System.out.println(task.getTaskNumber() + ": " + task.getSearchQuery() + " PLACED ON IN QUEUE");
                 // Also add the job number to the OUT-QUEUE with a null value.
-                _outQueue.put(taskNumber, null);
-                System.out.println(taskNumber + " PLACED ON IN QUEUE");
+                _outQueue.put(task.getTaskNumber(), new WordFrequency[0]);
+                System.out.println(task.getTaskNumber() + " PLACED ON IN QUEUE");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -134,10 +177,10 @@ public class ServiceHandler extends HttpServlet {
             // Waiting on a job to complete.
             try {
                 // Check OUT-QUEUE for finished job.
-                WordFrequency[] taskResult = _outQueue.get(taskNumber);
-                System.out.println("TASK " + taskNumber + " FOUND ON OUT QUEUE");
-                if (taskResult != null && taskResult.length > 0) {
+                WordFrequency[] taskResult = _outQueue.get(params.getTaskNumber());
 
+//                System.out.println("TASK " + params.getTaskNumber() + " FOUND ON OUT QUEUE");
+                if (taskResult != null && taskResult.length > 0) {
                     System.out.println("\tGOT RESULT FROM OUT QUEUE");
                     // Get hard-coded results for demonstration
                     WordFrequency[] words = new WeightedFont().getFontSizes(taskResult);
@@ -155,13 +198,13 @@ public class ServiceHandler extends HttpServlet {
 
                 } else {
                     // Still waiting for task to complete...
-                    System.out.println("\tRESULTS WAS NULL");
-                    printWaitPage(out, taskNumber, query, pollingTime, searchSite);
+//                    System.out.println("\tRESULTS WAS NULL");
+                    printWaitPage(out, params);
                 }
             } catch (NullPointerException e) {
 //                e.printStackTrace();
-                System.out.println(taskNumber + " NOT FOUND ON OUT QUEUE");
-                printWaitPage(out, taskNumber, query, pollingTime, searchSite);
+                System.out.println(params.getTaskNumber() + " NOT FOUND ON OUT QUEUE");
+                printWaitPage(out, params);
             }
         }
     }
@@ -202,30 +245,29 @@ public class ServiceHandler extends HttpServlet {
         return image;
     }
 
-    private void printWaitPage(PrintWriter out, String taskNumber, String queryText, String pollingTime, String searchSite) {
-        out.print("<H1>Processing request for Job#: " + taskNumber + "</H1>");
+    private void printWaitPage(PrintWriter out, RequestParams params) {
+        out.print("<H1>Processing request for Job#: " + params.getTaskNumber() + "</H1>");
         out.print("<div id=\"r\"></div>");
         out.print("<font color=\"#993333\"><b>");
-//		out.print("<P>Language Dataset is located at " + languageDataSet);
-//		out.print("<P>Language Dataset is <b><u>" + _dataSetFile.length() + "</u></b> bytes in size");
-        out.print("<br>Polling Time: " + pollingTime + "(ms)");
+        out.print("<br>Polling Time: " + params.getPollingTime() + "(ms)");
 //		out.print("<br>Number of Results: " + numberOfResults);
-        out.print("<br>Query Text: " + queryText);
-        out.print("<br>Searching site: " + searchSite);
+        out.print("<br>Query Text: " + params.getQuery());
+        out.print("<br>Searching site: " + params.getSearchSite());
         out.print("</font><p/>");
         out.print("<form method=\"POST\" name=\"frmRequestDetails\">");
-        out.print("<input name=\"cmbSearchSite\" type=\"hidden\" value=\"" + searchSite + "\">");
-        out.print("<input name=\"cmbPollingTime\" type=\"hidden\" value=\"" + pollingTime + "\">");
-//		out.print("<input name=\"cmbNumberOfResults\" type=\"hidden\" value=\"" + numberOfResults + "\">");
-        out.print("<input name=\"query\" type=\"hidden\" value=\"" + queryText + "\">");
-        out.print("<input name=\"frmTaskNumber\" type=\"hidden\" value=\"" + taskNumber + "\">");
+        out.print("<input name=\"frmTaskNumber\" type=\"hidden\" value=\"" + params.getTaskNumber() + "\">");
+        out.print("<input name=\"strQuery\" type=\"hidden\" value=\"" + params.getQuery() + "\">");
+        out.print("<input name=\"cmbSearchSite\" type=\"hidden\" value=\"" + params.getSearchSite() + "\">");
+        out.print("<input name=\"cmbMaxResults\" type=\"hidden\" value=\"" + params.getMaxResults() + "\">");
+        out.print("<input name=\"cmbMaxDepth\" type=\"hidden\" value=\"" + params.getMaxDepth() + "\">");
+        out.print("<input name=\"cmbPollingTime\" type=\"hidden\" value=\"" + params.getPollingTime() + "\">");
         out.print("</form>");
         out.print("</body>");
         out.print("</html>");
 
         out.print("<script>");
 //              out.print("<LI>Return the jobNumber to the client web browser with a wait interval using <meta http-equiv=\"refresh\" content=\"10\">. The content=\"10\" will wait for 10s.");
-        out.print("var wait=setTimeout(\"document.frmRequestDetails.submit();\", " + pollingTime + ");");
+        out.print("var wait=setTimeout(\"document.frmRequestDetails.submit();\", " + (params.getPollingTime() * 1000) + ");");
         out.print("</script>");
     }
 

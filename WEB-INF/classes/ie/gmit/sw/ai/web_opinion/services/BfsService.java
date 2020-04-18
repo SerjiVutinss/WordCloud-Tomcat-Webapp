@@ -69,7 +69,7 @@ public class BfsService {
                     Document childDoc = null;
                     try {
                         childDoc = Jsoup.connect(linkUrl).get();
-                        // Since this is a child doc (i.e. could be from any site)
+                        // Since this is a child doc (i.e. could be from any site), use GenericDocumentSelector
                         ScoredDocument scoredChild = new ScoredDocument(childDoc, linkUrl, rootDoc.getQuery(), new GenericDocumentSelector());
                         int fuzzyScore = fuzzy.getFuzzyHeuristic(scoredChild);
 

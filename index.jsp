@@ -39,10 +39,39 @@
 
                         <tr>
                             <td>
-                                <select name="cmbOptions">
-                                    <option>Option 1</option>
-                                    <option selected>Option 2</option>
-                                    <option>Option 3</option>
+                                <select name="cmbMaxResults">
+                                    <option>5</option>
+                                    <option>10</option>
+                                    <option>20</option>
+                                    <option selected>32</option>
+                                    <option>50</option>
+                                    <option>100</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                <select name="cmbMaxDepth">
+                                    <option>5</option>
+                                    <option>10</option>
+                                    <option>20</option>
+                                    <option selected>50</option>
+                                    <option>100</option>
+                                    <option>200</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                <select name="cmbPollingTime">
+                                    <option selected>1</option>
+                                    <option>3</option>
+                                    <option>5</option>
+                                    <option>10</option>
+                                    <option>20</option>
+                                    <option>30</option>
                                 </select>
                             </td>
                         </tr>
@@ -65,10 +94,8 @@
                     <p/>
 
                     <b>Enter Text :</b><br>
-                    <input name="query" size="100">
+                    <input name="strQuery" size="100">
                     <p/>
-
-                    <input type="hidden" name="searchSite"/>
 
                     <center><input type="submit" value="Search & Visualise!"></center>
                 </fieldset>

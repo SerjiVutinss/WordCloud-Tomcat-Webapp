@@ -31,6 +31,10 @@ public class FuzzyService {
         // Evaluate
         fis.evaluate();
 
-        return (int)fis.getVariable("relevancy").getLatestDefuzzifiedValue();
+        int result = (int)fis.getVariable("relevancy").getLatestDefuzzifiedValue();
+
+        System.out.println("FUZZY RESULT: " + result);
+
+        return result;
     }
 }

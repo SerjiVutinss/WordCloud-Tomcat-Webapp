@@ -10,7 +10,7 @@ public class SearchModel {
     private String _baseUrl;
     private int _maxResults = 32;
     private int _maxDepth = 50;
-    private int _threshold = 50;
+    private int _threshold = 10;
     private IDocumentSelector _documentSelector;
 
     public SearchModel(Enums.SearchType searchType, String baseUrl) {
