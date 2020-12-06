@@ -2,8 +2,12 @@ package ie.gmit.sw.ai.web_opinion.services;
 
 import ie.gmit.sw.ai.cloud.WordFrequency;
 import ie.gmit.sw.ai.web_opinion.models.ScoredDocument;
-import ie.gmit.sw.ai.web_opinion.models.Query;
+import ie.gmit.sw.ai.web_opinion.models.SearchQuery;
+import ie.gmit.sw.ai.web_opinion.search.BeamSearch;
+import ie.gmit.sw.ai.web_opinion.search.BestFirstSearch;
+import ie.gmit.sw.ai.web_opinion.search.ISearch;
 import ie.gmit.sw.ai.web_opinion.utils.FrequencyMap;
+import ie.gmit.sw.ai.web_opinion.utils.IFrequencyMap;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
@@ -13,17 +17,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Processes a SearchQuery object
+ */
 public class QueryRunner {
 
-    private Query _query;
-    private FrequencyMap frequencyMap;
-    private WordFrequency[] results;
+    private SearchQuery _query; // query to be processed
+    private IFrequencyMap<String> frequencyMap; // all processed results are placed in this map
+    private WordFrequency[] results; // the final result array, sorted and trimmed to size
 
     private final String TAG = "[QUERY RUNNER] ";
 
-    public QueryRunner(Query searchQuery){
+    public QueryRunner(SearchQuery searchQuery) {
         this._query = searchQuery;
-        this.frequencyMap = new FrequencyMap();
+        this.frequencyMap = new FrequencyMap<>();
         this.run();
     }
 
@@ -36,10 +43,21 @@ public class QueryRunner {
             // Since this is a 'root' document (i.e. search engine results), be sure to pass in the search model's document selector
             ScoredDocument scoredRootDocument = new ScoredDocument(rootDocument, _query.getUrl(), _query.getQuery(), _query.getSearchModel().getDocumentSelector());
 
-            BfsService bfsService = new BfsService(scoredRootDocument, _query.getSearchModel());
-            bfsService.run();
+            // Create a BFS service and submit the document and search model from the query
 
-            this.frequencyMap = bfsService.getFrequencyMap();
+            ISearch searchService;
+            switch (_query.getSearchModel().getHeuristicSearchType()) {
+                case BEAM:
+                    searchService = new BeamSearch();
+                    break;
+                default:
+                    searchService = new BestFirstSearch();
+                    break;
+            }
+
+            searchService.search(scoredRootDocument, _query.getSearchModel());
+
+            this.frequencyMap = searchService.getFrequencyMap();
             this.results = sortAndTrim(_query.getMaxResults());
         } catch (IOException e) {
             e.printStackTrace();

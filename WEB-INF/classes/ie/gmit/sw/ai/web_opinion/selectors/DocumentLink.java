@@ -1,6 +1,6 @@
 package ie.gmit.sw.ai.web_opinion.selectors;
 
-public class DocumentLink {
+public class DocumentLink implements IEdge {
 
     private String _url;
     private String _title;
@@ -12,15 +12,8 @@ public class DocumentLink {
         this._snippet = snippet;
     }
 
-    public String getUrl() {
+    @Override
+    public String getIdentifier() {
         return _url;
-    }
-
-    public String getTitle() {
-        return _title;
-    }
-
-    public String getSnippet() {
-        return _snippet;
     }
 }

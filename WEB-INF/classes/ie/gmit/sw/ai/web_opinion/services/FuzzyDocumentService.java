@@ -1,25 +1,21 @@
 package ie.gmit.sw.ai.web_opinion.services;
 
+import ie.gmit.sw.ai.web_opinion.models.IScorableDocument;
 import ie.gmit.sw.ai.web_opinion.utils.Config;
-import ie.gmit.sw.ai.web_opinion.models.ScoredDocument;
-import net.sourceforge.jFuzzyLogic.FIS;
 
-public class FuzzyService {
+public class FuzzyDocumentService extends BaseFuzzyService<IScorableDocument> {
 
-    private final FIS fis;
-    private final String fileName;
-
-    public FuzzyService() {
-        fileName = Config.FCL_FILE_LOCATION;
-        fis = FIS.load(fileName);
+    public FuzzyDocumentService() {
+        super(Config.FCL_FILE_LOCATION);
     }
 
-    public int getFuzzyHeuristic(ScoredDocument scoredDocument) {
+    @Override
+    public int getScore(IScorableDocument scoredDocument) {
 
         // Load from 'FCL' file
 
         // Error while loading?
-        if( fis == null ) {
+        if (fis == null) {
             System.err.println("Can't load file: '" + fileName + "'");
             return 0;
         }
@@ -31,9 +27,7 @@ public class FuzzyService {
         // Evaluate
         fis.evaluate();
 
-        int result = (int)fis.getVariable("relevancy").getLatestDefuzzifiedValue();
-
-        System.out.println("FUZZY RESULT: " + result);
+        int result = (int) fis.getVariable("relevancy").getLatestDefuzzifiedValue();
 
         return result;
     }

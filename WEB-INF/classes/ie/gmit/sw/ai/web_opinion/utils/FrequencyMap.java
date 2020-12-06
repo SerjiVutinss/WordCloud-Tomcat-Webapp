@@ -3,17 +3,29 @@ package ie.gmit.sw.ai.web_opinion.utils;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-public class FrequencyMap implements Map<String, Integer> {
+/**
+ * Generic implementation of IMergeableFrequencyMap
+ * @param <E> Type of elements whose frequency are to be tracked by the FrequencyMap
+ */
+public class FrequencyMap<E> implements IMergeableFrequencyMap<E> {
 
-    private Map<String, Integer> map;
+    private ConcurrentMap<E, Integer> map;
 
     public FrequencyMap() {
         map = new ConcurrentSkipListMap<>();
     }
 
-    public Integer put(String key) {
+    /**
+     * Implementation of the put() method from IFrequencyMap
+     *
+     * @param key instance of type E to add to the map.
+     * @return the number of times instance 'key' has been added to the structure
+     */
+    @Override
+    public Integer put(E key) {
         if (map.containsKey(key)) {
             int frequency = map.get(key);
             frequency += 1;
@@ -24,11 +36,25 @@ public class FrequencyMap implements Map<String, Integer> {
         }
     }
 
-    public void merge(FrequencyMap inputMap) {
-        for (Map.Entry<String, Integer> e : inputMap.entrySet()) {
+
+    /**
+     * Merge all elements of inputMap to this instance of IFrequencyMap, combining frequencies where necessary.
+     *
+     * Any instances of E already in this.map will have their frequency incremented by the occurrence of the same
+     * element.
+     *
+     * @param inputMap merge this map to the implementing class' IMergeableFrequencyMap map.
+     */
+    @Override
+    public void merge(IMergeableFrequencyMap<E> inputMap) {
+        // Loop through all entries in the inputMap
+        for (Map.Entry<E, Integer> e : inputMap.entrySet()) {
+            // If our map already contains this element
             if (map.containsKey(e.getKey())) {
+                // Put the element in our map, combining the frequencies from both maps.
                 map.put(e.getKey(), map.get(e.getKey()) + e.getValue());
             } else {
+                // Element not in our map, just add it with the frequency from inputMap.
                 map.put(e.getKey(), e.getValue());
             }
         }
@@ -62,7 +88,7 @@ public class FrequencyMap implements Map<String, Integer> {
 
     @Override
     @Deprecated
-    public Integer put(String key, Integer value) {
+    public Integer put(E key, Integer value) {
         return map.put(key, value);
     }
 
@@ -72,7 +98,7 @@ public class FrequencyMap implements Map<String, Integer> {
     }
 
     @Override
-    public void putAll(Map<? extends String, ? extends Integer> m) {
+    public void putAll(Map<? extends E, ? extends Integer> m) {
         map.putAll(m);
     }
 
@@ -82,7 +108,7 @@ public class FrequencyMap implements Map<String, Integer> {
     }
 
     @Override
-    public Set<String> keySet() {
+    public Set<E> keySet() {
         return map.keySet();
     }
 
@@ -92,7 +118,7 @@ public class FrequencyMap implements Map<String, Integer> {
     }
 
     @Override
-    public Set<Entry<String, Integer>> entrySet() {
+    public Set<Entry<E, Integer>> entrySet() {
         return map.entrySet();
     }
     //</editor-fold desc="Map">

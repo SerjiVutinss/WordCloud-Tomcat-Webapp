@@ -14,84 +14,106 @@
                 <fieldset>
                     <legend><h3>Specify Details</h3></legend>
 
-                    <b>Select Option:</b>
-                    <p>
-                        You should make the most of the ability to configure a search with different algorithms and
-                        heuristics. You can employ fuzzy logic or machine
-                        learning if you like.
+<%--                    <b>Select Option:</b>--%>
+<%--                    <p>--%>
+<%--                        You should make the most of the ability to configure a search with different algorithms and--%>
+<%--                        heuristics. You can employ fuzzy logic or machine--%>
+<%--                        learning if you like.--%>
+<%--                    <p>--%>
 
-                    <p>
+                    <p><b>Site to Search:</b>
+                        <span>
+                            <select name="cmbSearchSite">
+                                <option selected>DuckDuckGo</option>
+                                <option>Wikipedia</option>
+                            </select>
+                        </span>
+                    </p>
 
-                    <table>
-                        <tr>
-                            <th>Site</th>
-                            <th>Option</th>
-                        </tr>
+                    <p><b>Search Type:</b>
+                        <span>
+                            <select name="cmbSearchType">
+                                <option selected>Best First</option>
+                                <option>Beam</option>
+                            </select>
+                        </span>
+                    </p>
 
-                        <tr>
-                            <td>
-                                <select name="cmbSearchSite">
-                                    <option selected>DuckDuckGo</option>
-                                    <option>Wikipedia</option>
-                                </select>
-                            </td>
-                        </tr>
+                    <p><b>Max Results:</b>
+                        <span>
+                            <select name="cmbMaxResults">
+                                <option>5</option>
+                                <option>10</option>
+                                <option selected>20</option>
+                                <option>32</option>
+                                <option>50</option>
+                                <option>100</option>
+                            </select>
+                        </span>
+                    </p>
 
-                        <tr>
-                            <td>
-                                <select name="cmbMaxResults">
-                                    <option>5</option>
-                                    <option>10</option>
-                                    <option>20</option>
-                                    <option selected>32</option>
-                                    <option>50</option>
-                                    <option>100</option>
-                                </select>
-                            </td>
-                        </tr>
+                    <p><b>Max Depth:</b>
+                        <span>
+                            <select name="cmbMaxDepth">
+                                <option>5</option>
+                                <option>10</option>
+                                <option>20</option>
+                                <option selected>50</option>
+                                <option>100</option>
+                                <option>200</option>
+                            </select>
+                        </span>
+                    </p>
 
-                        <tr>
-                            <td>
-                                <select name="cmbMaxDepth">
-                                    <option>5</option>
-                                    <option>10</option>
-                                    <option>20</option>
-                                    <option selected>50</option>
-                                    <option>100</option>
-                                    <option>200</option>
-                                </select>
-                            </td>
-                        </tr>
+                    <p><b>Beam Width (if Beam search):</b>
+                        <span>
+                            <select name="cmbBeamWidth">
+                                <option>3</option>
+                                <option selected>5</option>
+                                <option>10</option>
+                            </select>
+                        </span>
+                    </p>
 
-                        <tr>
-                            <td>
-                                <select name="cmbPollingTime">
-                                    <option selected>1</option>
-                                    <option>3</option>
-                                    <option>5</option>
-                                    <option>10</option>
-                                    <option>20</option>
-                                    <option>30</option>
-                                </select>
-                            </td>
-                        </tr>
+                    <p><b>Threshold (for fuzzy score):</b>
+                        <span>
+                            <select name="cmbThreshold">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option selected>4</option>
+                                <option>5</option>
+                                <option>6</option>
+                                <option>7</option>
+                                <option>8</option>
+                                <option>9</option>
+                            </select>
+                        </span>
+                    </p>
 
-                    </table>
+                    <p><b>Polling Time:</b>
+                        <span>
+                            <select name="cmbPollingTime">
+                                <option selected>1</option>
+                                <option>3</option>
+                                <option>5</option>
+                                <option>10</option>
+                                <option>20</option>
+                                <option>30</option>
+                            </select>
+                        </span>
+                    </p>
 
-
-                    <p>
-
-                        Only use the following JARs with your application. You can assume that they have already been
-                        added to the Tomcat CLASSPATH:
-                    <p>
-                    <ol>
-                        <li><a href="https://jsoup.org">JSoup</a>
-                        <li><a href="http://jfuzzylogic.sourceforge.net/html/index.html">JFuzzyLogic</a>
-                        <li><a href="https://github.com/jeffheaton/encog-java-core">Encog</a>
-                    </ol>
-
-
-                    <p/>
+<%--                    <p>--%>
+<%--                        Only use the following JARs with your application. You can assume that they have already been--%>
+<%--                        added to the Tomcat CLASSPATH:--%>
+<%--                    <p>--%>
+<%--                    <ol>--%>
+<%--                        <li><a href="https://jsoup.org">JSoup</a>--%>
+<%--                        <li><a href="http://jfuzzylogic.sourceforge.net/html/index.html">JFuzzyLogic</a>--%>
+<%--                        <li><a href="https://github.com/jeffheaton/encog-java-core">Encog</a>--%>
+<%--                    </ol>--%>
+<%--                    <p/>--%>
 
                     <b>Enter Text :</b><br>
                     <input name="strQuery" size="100">

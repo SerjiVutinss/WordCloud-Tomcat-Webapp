@@ -7,39 +7,39 @@ import org.jsoup.select.Elements;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Duck Duck Go document selector used to parse search results.
+ */
 public class DuckDuckGoDocSelector implements IDocumentSelector {
 
     @Override
     public DocumentElements getDocumentElements(Document doc) {
 
         List<DocumentLink> documentLinks = new ArrayList<>();
-        // Find the div with Id=links and get all of its children with class=results_links
+
+        // All search results are contained within a <div id="links">
+        //  Each search result is contained within a <div class="results_links">
         Elements results_links = doc.getElementById("links").getElementsByClass("results_links");
-        // Each element in results_links represents a result, parse each result accordingly
-        for (Element result : results_links) {
-            // Get the links_main section from the result - there will be only one
-            Element links_main = result.getElementsByClass("links_main").first();
 
-            // Get the title div - only one
-            Element result_title = links_main.getElementsByClass("result_title").first();
-            // Get the hyperlink - only one
-            Element hyperlink = result_title.getElementsByTag("a").first();
+        // Parse each search result
+        for (Element result_link : results_links) documentLinks.add(parseResult(result_link));
 
-            // Hyperlink for the result
-            String url = hyperlink.attr("href");
-            // Title of the Hyperlink
-            String title = hyperlink.text();
-
-            // Also get the snippet
-            String snippet = links_main.getElementsByClass("result_snippet").first().text();
-
-            documentLinks.add(new DocumentLink(url, title, snippet));
-        }
-
+        // This is a search result page, so there are no paras and headings
         List<String> paragraphs = new ArrayList<>();
         List<String> headingOnes = new ArrayList<>();
 
-
         return new DocumentElements(doc.title(), documentLinks, paragraphs, headingOnes);
+    }
+
+    private DocumentLink parseResult(Element result_link) {
+
+        // The first hyperlink within the result is the URL
+        Element link = result_link.getElementsByClass("links_main").first().getElementsByTag("a").first();
+        String url = link.attr("href");
+        // Parse title and snippet
+        String title = link.text();
+        String snippet = result_link.getElementsByClass("result__snippet").first().text();
+
+        return new DocumentLink(url, title, snippet);
     }
 }

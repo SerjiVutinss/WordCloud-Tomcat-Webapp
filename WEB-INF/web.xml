@@ -19,7 +19,7 @@
 
   <context-param>
     <param-name>FCL_FILE_LOCATION</param-name>
-    <param-value>/res/my-fcl.fcl</param-value>
+    <param-value>/res/wcloud.fcl</param-value>
   </context-param>
 
 

@@ -1,8 +1,8 @@
 package ie.gmit.sw.ai.web_opinion.test;
 
 import ie.gmit.sw.ai.cloud.WordFrequency;
-import ie.gmit.sw.ai.web_opinion.SearchQueryTaskWorker;
-import ie.gmit.sw.ai.web_opinion.models.Query;
+import ie.gmit.sw.ai.web_opinion.WebSearchTaskWorker;
+import ie.gmit.sw.ai.web_opinion.models.SearchQuery;
 import ie.gmit.sw.ai.web_opinion.models.SearchQueryTask;
 
 import java.io.PrintWriter;
@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class MockServiceHandler implements Runnable {
-
 
     private BlockingQueue<SearchQueryTask> _inQueue;
     private ConcurrentMap<String, WordFrequency[]> _outQueue;
@@ -30,14 +29,17 @@ public class MockServiceHandler implements Runnable {
 
         //Initialise some request variables with the submitted form info. These are local to this method and thread safe...
         // SearchQuery variables
-        String query = "species";
+        String query = "ireland";
+//        String searchType = "duckduckgo";
         String searchType = "wikipedia";
-        int maxResults = 32;
+        int maxResults = 20;
         int maxDepth = 50;
+        int threshold = 4;
 
-        Query searchQuery = new Query.QueryBuilder(query, searchType)
+        SearchQuery searchQuery = new SearchQuery.SearchQueryBuilder(query, searchType)
                 .setMaxDepth(maxDepth)
                 .setMaxResults(maxResults)
+                .setThreshold(threshold)
                 .build();
 
         System.out.println(TAG + "Created new SearchQuery: " + searchQuery.toString());
@@ -59,7 +61,7 @@ public class MockServiceHandler implements Runnable {
             System.out.println(TAG + "Created new task number: " + taskNumber);
 
             // Create a separate worker thread for each client's request.
-            new Thread(new SearchQueryTaskWorker(_inQueue, _outQueue)).start();
+            new Thread(new WebSearchTaskWorker(_inQueue, _outQueue)).start();
 
             try {
 

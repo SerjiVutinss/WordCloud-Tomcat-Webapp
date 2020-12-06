@@ -3,12 +3,11 @@ package ie.gmit.sw;
 import ie.gmit.sw.ai.cloud.LogarithmicSpiralPlacer;
 import ie.gmit.sw.ai.cloud.WeightedFont;
 import ie.gmit.sw.ai.cloud.WordFrequency;
-import ie.gmit.sw.ai.web_opinion.SearchQueryTaskWorker;
+import ie.gmit.sw.ai.web_opinion.WebSearchTaskWorker;
 import ie.gmit.sw.ai.web_opinion.models.Enums;
-import ie.gmit.sw.ai.web_opinion.models.Query;
+import ie.gmit.sw.ai.web_opinion.models.SearchQuery;
 import ie.gmit.sw.ai.web_opinion.models.SearchQueryTask;
 import ie.gmit.sw.ai.web_opinion.utils.Config;
-import org.jsoup.Connection;
 
 import javax.imageio.ImageIO;
 import javax.servlet.ServletContext;
@@ -83,6 +82,9 @@ public class ServiceHandler extends HttpServlet {
         private final int _maxDepth;
 
         private final int _pollingTime;
+        private int _beamWidth;
+        private int _threshold;
+        private String _searchType;
 
         public RequestParams(HttpServletRequest req) {
 
@@ -91,7 +93,10 @@ public class ServiceHandler extends HttpServlet {
             _searchSite = req.getParameter("cmbSearchSite");
             _maxResults = Integer.parseInt(req.getParameter("cmbMaxResults"));
             _maxDepth = Integer.parseInt(req.getParameter("cmbMaxDepth"));
+            _beamWidth = Integer.parseInt(req.getParameter("cmbBeamWidth"));
+            _threshold = Integer.parseInt(req.getParameter("cmbThreshold"));
             _pollingTime = Integer.parseInt(req.getParameter("cmbPollingTime"));
+            _searchType = req.getParameter("cmbSearchType");
         }
 
         public String getTaskNumber() {
@@ -122,10 +127,22 @@ public class ServiceHandler extends HttpServlet {
             return _pollingTime;
         }
 
+        public int getBeamWidth() {
+            return _beamWidth;
+        }
+
         @Override
         public String toString() {
             return String.format("{TaskNumber: %s; Query: %s; SearchSite: %s; MaxResults: %d; MaxDepth: %d; PollingTime: %d;",
                     this._taskNumber, this._query, this._searchSite, this._maxResults, this._maxDepth, this._pollingTime);
+        }
+
+        public int getThreshold() {
+            return _threshold;
+        }
+
+        public String getSearchType() {
+            return _searchType;
         }
     }
 
@@ -141,9 +158,24 @@ public class ServiceHandler extends HttpServlet {
 //        String searchType = "wikipedia";
 //        String pollingTime = "5000";
 
-        Query searchQuery = new Query.QueryBuilder(params.getQuery(), params.getSearchSite())
+        String sType = params.getSearchType();
+        Enums.HeuristicSearchType hsType;
+        switch (sType) {
+            case "Beam":
+                hsType = Enums.HeuristicSearchType.BEAM;
+                break;
+            default:
+                hsType = Enums.HeuristicSearchType.BEST_FIRST;
+                break;
+        }
+
+        System.out.println("SH: " + params._maxResults);
+        SearchQuery searchQuery = new SearchQuery.SearchQueryBuilder(params.getQuery(), params.getSearchSite())
                 .setMaxDepth(params._maxDepth)
                 .setMaxResults(params._maxResults)
+                .setThreshold(params._threshold)
+                .setBeamWidth(params._beamWidth)
+                .setHeuristicSearchType(hsType)
                 .build();
 
         // First request - must create the task number
@@ -155,7 +187,7 @@ public class ServiceHandler extends HttpServlet {
 
 //			// Create a separate worker thread for each client's request.
             // START THE PARSER HERE...
-            new Thread(new SearchQueryTaskWorker(_inQueue, _outQueue)).start();
+            new Thread(new WebSearchTaskWorker(_inQueue, _outQueue)).start();
 
             printWaitPage(out, params);
 
@@ -190,6 +222,7 @@ public class ServiceHandler extends HttpServlet {
                     LogarithmicSpiralPlacer placer = new LogarithmicSpiralPlacer(800, 600);
                     for (WordFrequency word : words) {
                         placer.place(word); //Place each word on the canvas starting with the largest
+                        System.out.println(word.getWord() + ": " + word.getFrequency());
                     }
 
                     BufferedImage cloud = placer.getImage(); //Get a handle on the word cloud graphic
@@ -250,16 +283,25 @@ public class ServiceHandler extends HttpServlet {
         out.print("<div id=\"r\"></div>");
         out.print("<font color=\"#993333\"><b>");
         out.print("<br>Polling Time: " + params.getPollingTime() + "(ms)");
-//		out.print("<br>Number of Results: " + numberOfResults);
-        out.print("<br>Query Text: " + params.getQuery());
         out.print("<br>Searching site: " + params.getSearchSite());
+        out.print("<br>Query Text: " + params.getQuery());
+        out.print("<br>Search Type: " + params.getSearchType());
+        out.print("<br>Max number of Results: " + params.getMaxResults());
+        out.print("<br>Max search depth: " + params.getMaxDepth());
+        out.print("<br>Beam width: " + params.getBeamWidth());
+        out.print("<br>Threshold: " + params.getThreshold());
+
+
         out.print("</font><p/>");
         out.print("<form method=\"POST\" name=\"frmRequestDetails\">");
         out.print("<input name=\"frmTaskNumber\" type=\"hidden\" value=\"" + params.getTaskNumber() + "\">");
         out.print("<input name=\"strQuery\" type=\"hidden\" value=\"" + params.getQuery() + "\">");
         out.print("<input name=\"cmbSearchSite\" type=\"hidden\" value=\"" + params.getSearchSite() + "\">");
+        out.print("<input name=\"cmbSearchType\" type=\"hidden\" value=\"" + params.getSearchType() + "\">");
         out.print("<input name=\"cmbMaxResults\" type=\"hidden\" value=\"" + params.getMaxResults() + "\">");
         out.print("<input name=\"cmbMaxDepth\" type=\"hidden\" value=\"" + params.getMaxDepth() + "\">");
+        out.print("<input name=\"cmbBeamWidth\" type=\"hidden\" value=\"" + params.getBeamWidth() + "\">");
+        out.print("<input name=\"cmbThreshold\" type=\"hidden\" value=\"" + params.getThreshold() + "\">");
         out.print("<input name=\"cmbPollingTime\" type=\"hidden\" value=\"" + params.getPollingTime() + "\">");
         out.print("</form>");
         out.print("</body>");
@@ -290,9 +332,8 @@ public class ServiceHandler extends HttpServlet {
 
         out.print("<img src=\"data:image/png;base64," + encodeToString(cloud) + "\" alt=\"Word Cloud\">");
 
-
         out.print("</fieldset>");
-        out.print("<P>Maybe output some search stats here, e.g. max search depth, effective branching factor.....<p>");
+//        out.print("<P>Maybe output some search stats here, e.g. max search depth, effective branching factor.....<p>");
         out.print("<a href=\"./\">Return to Start Page</a>");
         out.print("</body>");
         out.print("</html>");
